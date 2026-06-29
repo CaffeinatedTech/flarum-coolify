@@ -1,7 +1,7 @@
 services:
   flarum:
     image: crazymax/flarum:latest
-    container_name: flarum
+
     restart: unless-stopped
     volumes:
       - type: bind
@@ -23,12 +23,11 @@ services:
       - "traefik.http.routers.flarum.rule=Host(`${DOMAIN}`)"
       - traefik.http.routers.flarum.entryPoints=http
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
   db:
     image: mariadb:11
-    container_name: flarum-db
+
     restart: unless-stopped
     command:
       - "mysqld"
@@ -44,8 +43,3 @@ services:
       MYSQL_DATABASE: ${DB_NAME:-flarum}
       MYSQL_USER: ${DB_USER:-flarum}
       MYSQL_PASSWORD: ${DB_PASSWORD}
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
