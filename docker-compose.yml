@@ -1,0 +1,51 @@
+services:
+  flarum:
+    image: crazymax/flarum:latest
+    container_name: flarum
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data
+        is_directory: true
+    environment:
+      TZ: ${TZ:-UTC}
+      FLARUM_BASE_URL: https://${DOMAIN}
+      FLARUM_FORUM_TITLE: ${FLARUM_FORUM_TITLE:-My Community}
+      DB_HOST: ${DB_HOST:-db}
+      DB_NAME: ${DB_NAME:-flarum}
+      DB_USER: ${DB_USER:-flarum}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PREFIX: flarum_
+    labels:
+      - coolify.managed=true
+      - traefik.enable=true
+      - "traefik.http.routers.flarum.rule=Host(`${DOMAIN}`)"
+      - traefik.http.routers.flarum.entryPoints=http
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:11
+    container_name: flarum-db
+    restart: unless-stopped
+    command:
+      - "mysqld"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    volumes:
+      - type: bind
+        source: ./db
+        target: /var/lib/mysql
+        is_directory: true
+    environment:
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: ${DB_NAME:-flarum}
+      MYSQL_USER: ${DB_USER:-flarum}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
